@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import "../app/globals.css"; // Import global styles
-import { getContractAddress } from "ethers/lib/utils";
-import { ethers, providers } from "ethers";
+import "../app/globals.css";
+import { ethers } from "ethers";
 
 const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
 const contractABI = [
@@ -15,46 +14,18 @@ const contractABI = [
   {
     "anonymous": false,
     "inputs": [
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "from",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "timestamp",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "name",
-        "type": "string"
-      },
-      {
-        "indexed": false,
-        "internalType": "string",
-        "name": "message",
-        "type": "string"
-      }
+      { "indexed": true, "internalType": "address", "name": "from", "type": "address" },
+      { "indexed": false, "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+      { "indexed": false, "internalType": "string", "name": "name", "type": "string" },
+      { "indexed": false, "internalType": "string", "name": "message", "type": "string" }
     ],
     "name": "NewMemo",
     "type": "event"
   },
   {
     "inputs": [
-      {
-        "internalType": "string",
-        "name": "_name",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "_message",
-        "type": "string"
-      }
+      { "internalType": "string", "name": "_name", "type": "string" },
+      { "internalType": "string", "name": "_message", "type": "string" }
     ],
     "name": "buyCoffee",
     "outputs": [],
@@ -67,26 +38,10 @@ const contractABI = [
     "outputs": [
       {
         "components": [
-          {
-            "internalType": "address",
-            "name": "from",
-            "type": "address"
-          },
-          {
-            "internalType": "uint256",
-            "name": "timestamp",
-            "type": "uint256"
-          },
-          {
-            "internalType": "string",
-            "name": "name",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "message",
-            "type": "string"
-          }
+          { "internalType": "address", "name": "from", "type": "address" },
+          { "internalType": "uint256", "name": "timestamp", "type": "uint256" },
+          { "internalType": "string", "name": "name", "type": "string" },
+          { "internalType": "string", "name": "message", "type": "string" }
         ],
         "internalType": "struct BuyMeACoffee.Memo[]",
         "name": "",
@@ -103,28 +58,29 @@ const contractABI = [
     "stateMutability": "nonpayable",
     "type": "function"
   }
-]
-
-
+];
 
 export default function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const [signer, setSigner] = useState(null);
+  const [connection, setconnection] = useState("           ");
 
-  const LOCAL_RPC_URL = "http://127.0.0.1:8545";
-  const provider = new ethers.providers.JsonRpcProvider(LOCAL_RPC_URL);
-
+  useEffect(()=>{
+    connectWallet();
+  },[])
 
   const connectWallet = async () => {
-    if (window.ethereum) {
+    if (typeof window.ethereum !== "undefined") {
       try {
         const provider = new ethers.providers.Web3Provider(window.ethereum);
         await provider.send("eth_requestAccounts", []);
-        const signer = provider.getSigner();
+        const signer = await provider.getSigner();
         setSigner(signer);
         setIsConnected(true);
+        setconnection("Connected")
       } catch (error) {
         console.error("Error connecting wallet:", error);
+        alert("Failed to connect wallet: " + (error.reason || error.message));
       }
     } else {
       alert("Please install MetaMask!");
@@ -136,42 +92,24 @@ export default function Home() {
       alert("Please connect your wallet first");
       return;
     }
-    
     try {
       const contract = new ethers.Contract(contractAddress, contractABI, signer);
-      const tx = await contract.buyCoffee("Akindu", "Hello there");
+      const tx = await contract.buyCoffee("Alice", "Enjoy your coffee!", {
+        value: ethers.utils.parseEther("0.21"),
+      });
       await tx.wait();
-      alert("Transaction successful!");
+      alert("Coffee bought successfully!");
     } catch (error) {
       console.error("Error calling contract:", error);
-      alert("Transaction failed: " + error.message);
+      alert("Transaction failed: " + (error.reason || error.message));
     }
   };
-
-  const printDetails = async () => {
-    try {
-      const contract = new ethers.Contract(contractAddress, contractABI, provider);
-      const memos = await contract.getMemos();
-      if(memos==null){
-        console.log("hello");
-      } else {
-        console.log("out");
-      }
-    } catch (error) {
-      console.error("Error fetching memos:", error.reason || error);
-    }
-  };
-  
-  
-
-
 
   return (
     <div className="container">
       <p className="title">Buy Me A Coffee</p>
-      <button onClick={connectWallet} className="btn connect-btn">Connect Wallet</button>
+      <button onClick={connectWallet} className="btn connect-btn">{connection}</button>
       <button onClick={writeContract} className="btn buy-btn">Buy Coffee</button>
-      <button onClick={printDetails} className="btn buy-btn">View Details</button>
     </div>
   );
 }
